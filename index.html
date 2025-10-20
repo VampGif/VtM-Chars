@@ -13,17 +13,32 @@
             <header class="app-header">
                 <h1>Vampire: The Masquerade V5</h1>
                 <h2>Character Management</h2>
+                <div class="storage-status" id="storage-status">
+                    <small>Loading character data...</small>
+                </div>
             </header>
             
             <div class="main-content">
+                <div class="persistence-notice" id="persistence-notice" style="display: none;">
+                    <h3>⚠️ Character Persistence Notice</h3>
+                    <p>This application is running in a sandboxed environment where browser storage is restricted. Your characters will be saved during this browser session, but <strong>will be lost when you close the tab</strong>.</p>
+                    <p><strong>To save characters permanently:</strong></p>
+                    <ul>
+                        <li>Use the <strong>"Export All"</strong> button to download your characters as a JSON file</li>
+                        <li>Use the <strong>"Import"</strong> button to load characters from a saved JSON file</li>
+                        <li>Keep your exported JSON files safe - they're your permanent character storage</li>
+                    </ul>
+                    <button class="btn btn--primary" onclick="hidePersistenceNotice()">I Understand</button>
+                </div>
+                
                 <div class="character-list-controls">
                     <button class="btn btn--primary" id="create-character-btn">
                         + Create New Character
                     </button>
                     <div class="data-controls">
-                        <button class="btn btn--secondary" id="export-all-btn">Export All</button>
+                        <button class="btn btn--secondary" id="export-all-btn">📁 Export All</button>
                         <input type="file" id="import-file" accept=".json" style="display: none;">
-                        <button class="btn btn--secondary" id="import-btn">Import</button>
+                        <button class="btn btn--secondary" id="import-btn">📂 Import</button>
                         <button class="btn btn--outline" id="clear-all-btn">Clear All Data</button>
                     </div>
                 </div>
