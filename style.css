@@ -961,6 +961,34 @@ p {
   font-weight: var(--font-weight-normal);
 }
 
+.storage-status {
+  margin-top: var(--space-12);
+  padding: var(--space-8) var(--space-16);
+  background: rgba(139, 0, 0, 0.2);
+  border: 1px solid var(--vampire-border);
+  border-radius: var(--radius-base);
+  color: #e0e0e0;
+  font-size: var(--font-size-sm);
+}
+
+.storage-status.working {
+  background: rgba(102, 204, 102, 0.2);
+  border-color: #66cc66;
+  color: #66cc66;
+}
+
+.storage-status.warning {
+  background: rgba(255, 187, 68, 0.2);
+  border-color: #ffbb44;
+  color: #ffbb44;
+}
+
+.storage-status.error {
+  background: rgba(255, 68, 68, 0.2);
+  border-color: #ff4444;
+  color: #ff4444;
+}
+
 .main-content {
   padding: var(--space-32);
   max-width: 1200px;

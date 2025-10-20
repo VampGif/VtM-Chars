@@ -58,24 +58,77 @@ let appState = {
     currentView: 'character-list'
 };
 
-// CRITICAL FIX #1: In-memory persistence (localStorage not available in sandbox)
-// Note: Characters will persist during the current browser session
-// Use export/import functionality to save characters permanently
+// CRITICAL FIX: Session-based storage (localStorage blocked in sandbox)
+const STORAGE_KEY = 'vtm_characters';
+let storageAvailable = false;
 
-function saveToSessionStorage() {
-    // Characters automatically persist in appState.characters array
-    // No localStorage needed - data stays in memory during session
-    console.log('Characters saved to memory:', appState.characters.length, 'characters');
+// Test if localStorage is available
+function testStorageAvailability() {
+    try {
+        const test = 'vtm_test';
+        localStorage.setItem(test, 'test');
+        localStorage.removeItem(test);
+        storageAvailable = true;
+        console.log('localStorage: AVAILABLE');
+        return true;
+    } catch (error) {
+        storageAvailable = false;
+        console.log('localStorage: BLOCKED (sandboxed environment)');
+        console.log('Using session-only storage. Use Export/Import to persist characters.');
+        return false;
+    }
 }
 
-function loadFromSessionStorage() {
-    // Data persists in appState.characters during session
-    return appState.characters.length > 0;
+// LOAD on init - THIS MUST RUN ON PAGE LOAD
+function loadCharacters() {
+    testStorageAvailability();
+    
+    if (storageAvailable) {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                appState.characters = JSON.parse(stored);
+                console.log('Loaded from localStorage:', appState.characters.length, 'characters');
+                return appState.characters;
+            }
+        } catch (error) {
+            console.error('Error loading from localStorage:', error);
+        }
+    }
+    
+    // Fallback to session storage (memory only)
+    if (!appState.characters) {
+        appState.characters = [];
+    }
+    console.log('Using session-only storage:', appState.characters.length, 'characters');
+    return appState.characters;
 }
 
-function clearSessionStorage() {
+// SAVE after any change - THIS MUST RUN AFTER EVERY EDIT
+function saveCharacters() {
+    if (storageAvailable) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appState.characters));
+            console.log('Saved to localStorage:', appState.characters.length, 'characters');
+        } catch (error) {
+            console.error('Error saving to localStorage:', error);
+        }
+    } else {
+        // Session-only storage (characters persist in memory during browser tab session)
+        console.log('Saved to session memory:', appState.characters.length, 'characters');
+    }
+}
+
+function clearAllStorage() {
+    if (storageAvailable) {
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+        } catch (error) {
+            console.error('Error clearing localStorage:', error);
+        }
+    }
     appState.characters = [];
-    console.log('Characters cleared from memory');
+    console.log('Characters cleared from storage');
 }
 
 // Character Template
@@ -165,7 +218,8 @@ function createCharacterTemplate() {
 
 // Initialize Application
 function initApp() {
-    // Characters persist in memory during session
+    // CRITICAL: Load characters from localStorage on page load
+    loadCharacters();
     setupEventListeners();
     populateDropdowns();
     showView('character-list');
@@ -203,14 +257,14 @@ function setupEventListeners() {
     document.getElementById('add-xp-entry-btn').addEventListener('click', addXPEntryForm);
     document.getElementById('add-session-btn').addEventListener('click', addSessionForm);
     
-    // CRITICAL FIX #1: Auto-save on input changes (debounced)
+    // CRITICAL FIX: Auto-save on input changes (debounced)
     let saveTimeout;
     document.addEventListener('input', (e) => {
         if (appState.currentCharacter && e.target.closest('#character-sheet-view')) {
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(() => {
                 saveCurrentCharacter();
-                saveToSessionStorage(); // Auto-save to memory
+                saveCharacters(); // Auto-save to localStorage
             }, 500); // Wait 500ms after user stops typing
         }
     });
@@ -258,6 +312,9 @@ function showView(viewName) {
 function renderCharacterList() {
     const container = document.getElementById('character-cards');
     const emptyState = document.getElementById('empty-state');
+    
+    // Update storage status
+    updateStorageStatusDisplay();
     
     if (appState.characters.length === 0) {
         container.style.display = 'none';
@@ -308,7 +365,7 @@ function deleteCharacter(id) {
         if (appState.currentCharacter && appState.currentCharacter.id === id) {
             appState.currentCharacter = null;
         }
-        saveToSessionStorage(); // Save to memory after deletion
+        saveCharacters(); // Save to localStorage after deletion
         renderCharacterList();
     });
 }
@@ -356,6 +413,7 @@ function populateCharacterSheet(character) {
     createBloodPotencyDots();
     createHungerTracker();
     createHealthWillpowerTracks();
+    saveCharacters(); // Save after damage change
     document.getElementById('blood-pool').value = character.bloodPool;
     updateResonanceCheckboxes();
     
@@ -381,6 +439,7 @@ function createDots(container, currentValue, maxValue, attributeName) {
                 setAttributeValue(attributeName, i);
                 updateDotsDisplay(container, i, maxValue);
                 updateDerivedStats();
+                saveCharacters(); // Save after attribute change
             }
         });
         container.appendChild(dot);
@@ -480,6 +539,7 @@ function createSkillDots(container, currentValue, maxValue, skillName) {
                 if (appState.currentCharacter) {
                     appState.currentCharacter.skills[skillName] = i;
                     updateDotsDisplay(container, i, maxValue);
+                    saveCharacters(); // Save after skill change
                 }
             });
         }
@@ -490,6 +550,7 @@ function createSkillDots(container, currentValue, maxValue, skillName) {
 function updateSkillSpecialty(skillKey, value) {
     if (appState.currentCharacter) {
         appState.currentCharacter.specialties[skillKey] = value;
+        saveCharacters(); // Save after specialty change
     }
 }
 
@@ -564,6 +625,7 @@ function createDisciplineDots(container, currentValue, maxValue, disciplineIndex
                 if (appState.currentCharacter) {
                     appState.currentCharacter.disciplines[disciplineIndex].level = i;
                     updateDotsDisplay(container, i, maxValue);
+                    saveCharacters(); // Save after discipline change
                 }
             });
         }
@@ -625,7 +687,7 @@ function addDisciplineForm() {
             });
             renderDisciplines();
             saveCurrentCharacter();
-            saveToSessionStorage();
+            saveCharacters();
         }
         
         closeAddModal();
@@ -635,6 +697,7 @@ function addDisciplineForm() {
 function updateDisciplinePowers(index, value) {
     if (appState.currentCharacter) {
         appState.currentCharacter.disciplines[index].powers = value;
+        saveCharacters(); // Save after discipline powers change
     }
 }
 
@@ -642,6 +705,7 @@ function removeDiscipline(index) {
     if (appState.currentCharacter) {
         appState.currentCharacter.disciplines.splice(index, 1);
         renderDisciplines();
+        saveCharacters(); // Save after discipline removal
     }
 }
 
@@ -730,7 +794,7 @@ function addRelationshipForm() {
             appState.currentCharacter.relationships.push({ name, type, description });
             renderRelationships();
             saveCurrentCharacter();
-            saveToSessionStorage();
+            saveCharacters();
         }
         
         closeAddModal();
@@ -741,6 +805,7 @@ function removeRelationship(index) {
     if (appState.currentCharacter) {
         appState.currentCharacter.relationships.splice(index, 1);
         renderRelationships();
+        saveCharacters(); // Save after relationship removal
     }
 }
 
@@ -823,7 +888,7 @@ function addMeritForm() {
             appState.currentCharacter.merits.push({ name, dots, description });
             renderMerits();
             saveCurrentCharacter();
-            saveToSessionStorage();
+            saveCharacters();
         }
         
         closeAddModal();
@@ -834,6 +899,7 @@ function removeMerit(index) {
     if (appState.currentCharacter) {
         appState.currentCharacter.merits.splice(index, 1);
         renderMerits();
+        saveCharacters(); // Save after merit removal
     }
 }
 
@@ -905,7 +971,7 @@ function addFlawForm() {
             appState.currentCharacter.flaws.push({ name, description });
             renderFlaws();
             saveCurrentCharacter();
-            saveToSessionStorage();
+            saveCharacters();
         }
         
         closeAddModal();
@@ -916,6 +982,7 @@ function removeFlaw(index) {
     if (appState.currentCharacter) {
         appState.currentCharacter.flaws.splice(index, 1);
         renderFlaws();
+        saveCharacters(); // Save after flaw removal
     }
 }
 
@@ -934,6 +1001,7 @@ function createHumanityDots() {
             if (appState.currentCharacter) {
                 appState.currentCharacter.stains = index + 1;
                 updateStains();
+                saveCharacters(); // Save after stains change
             }
         });
     });
@@ -1025,7 +1093,7 @@ function addConvictionForm() {
             });
             renderConvictions();
             saveCurrentCharacter();
-            saveToSessionStorage();
+            saveCharacters();
         }
         
         closeAddModal();
@@ -1036,6 +1104,7 @@ function removeConviction(index) {
     if (appState.currentCharacter) {
         appState.currentCharacter.convictions.splice(index, 1);
         renderConvictions();
+        saveCharacters(); // Save after conviction removal
     }
 }
 
@@ -1055,6 +1124,7 @@ function createHungerTracker() {
             if (appState.currentCharacter) {
                 appState.currentCharacter.hunger = index + 1;
                 updateHunger();
+                saveCharacters(); // Save after hunger change
             }
         });
     });
@@ -1092,6 +1162,7 @@ function updateResonances(resonance, checked) {
     } else {
         appState.currentCharacter.resonances = appState.currentCharacter.resonances.filter(r => r !== resonance);
     }
+    saveCharacters(); // Save after resonance change
 }
 
 // Health & Willpower Tracking
@@ -1228,7 +1299,7 @@ function addXPEntryForm() {
         updateXPTotals();
         renderXPLog();
         saveCurrentCharacter();
-        saveToLocalStorage();
+        saveCharacters();
         
         closeAddModal();
     });
@@ -1239,6 +1310,7 @@ function removeXPEntry(index) {
         appState.currentCharacter.xpLog.splice(index, 1);
         updateXPTotals();
         renderXPLog();
+        saveCharacters(); // Save after XP entry removal
     }
 }
 
@@ -1351,7 +1423,7 @@ function addSessionForm() {
             appState.currentCharacter.sessions.push({ number, date, summary, npcs, xpAwarded });
             renderSessions();
             saveCurrentCharacter();
-            saveToSessionStorage();
+            saveCharacters();
         }
         
         closeAddModal();
@@ -1366,6 +1438,7 @@ function removeSession(index) {
             session.number = i + 1;
         });
         renderSessions();
+        saveCharacters(); // Save after session removal
     }
 }
 
@@ -1401,8 +1474,8 @@ function saveCurrentCharacter() {
     // Update header
     document.getElementById('character-name-header').textContent = appState.currentCharacter.name || 'Unnamed Character';
     
-    // CRITICAL FIX #1: Save to memory after any character save
-    saveToSessionStorage();
+    // CRITICAL FIX: Save to localStorage after any character save
+    saveCharacters();
     
     // CRITICAL FIX: Always refresh the character list after saving
     renderCharacterList();
@@ -1459,7 +1532,7 @@ function importCharacters(event) {
                 appState.characters.push(data);
             }
             
-            saveToSessionStorage(); // Save imported characters to memory
+            saveCharacters(); // Save imported characters to localStorage
             showView('character-list');
             renderCharacterList();
             alert('Characters imported successfully!');
@@ -1477,7 +1550,7 @@ function clearAllData() {
     showConfirmModal('Clear All Data', 'Are you sure you want to delete all characters? This action cannot be undone.', () => {
         appState.characters = [];
         appState.currentCharacter = null;
-        clearSessionStorage(); // Clear memory too
+        clearAllStorage(); // Clear localStorage too
         showView('character-list');
         renderCharacterList();
     });
@@ -1507,6 +1580,53 @@ function executeModalAction() {
 
 // Initialize when DOM loads
 document.addEventListener('DOMContentLoaded', initApp);
+
+// Storage status for users
+function showStorageStatus() {
+    if (storageAvailable) {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            const count = stored ? JSON.parse(stored).length : 0;
+            console.log('localStorage Status: WORKING - Found', count, 'characters');
+            return { working: true, persistent: true, count: appState.characters.length };
+        } catch (error) {
+            console.error('localStorage Status: ERROR -', error);
+            return { working: false, persistent: false, error: error.message };
+        }
+    } else {
+        console.log('Storage Status: SESSION-ONLY -', appState.characters.length, 'characters in memory');
+        return { working: true, persistent: false, count: appState.characters.length };
+    }
+}
+
+// Update storage status display
+function updateStorageStatusDisplay() {
+    const statusDiv = document.getElementById('storage-status');
+    if (!statusDiv) return;
+    
+    const status = showStorageStatus();
+    
+    statusDiv.className = 'storage-status';
+    
+    if (status.working && status.persistent) {
+        statusDiv.classList.add('working');
+        statusDiv.innerHTML = `<small>✓ Persistent storage: ${status.count} characters saved</small>`;
+    } else if (status.working && !status.persistent) {
+        statusDiv.classList.add('warning');
+        statusDiv.innerHTML = `<small>⚠ Session only: ${status.count} characters (Use Export to save permanently)</small>`;
+    } else {
+        statusDiv.classList.add('error');
+        statusDiv.innerHTML = `<small>✗ Storage error: ${status.error}</small>`;
+    }
+}
+
+// Call this periodically for status updates
+setInterval(() => {
+    showStorageStatus();
+    if (document.getElementById('storage-status')) {
+        updateStorageStatusDisplay();
+    }
+}, 5000); // Check every 5 seconds
 
 // CRITICAL FIX #2: Modal management helper
 function closeAddModal() {
