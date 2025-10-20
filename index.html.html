@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>VTM V5 Character Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Vampire: The Masquerade V5 Character Tracker</h1>
+  </header>
+
+  <main id="app">
+
+    <!-- Character List Section -->
+    <section id="character-list">
+      <button id="create-character-btn">Create New Character</button>
+      <div id="character-cards-container"></div>
+    </section>
+
+    <!-- Character Sheet Section -->
+    <section id="character-sheet" hidden>
+      <button id="back-to-list-btn">Back to Character List</button>
+
+      <form id="character-form" autocomplete="off">
+        <fieldset>
+          <legend>Basic Information</legend>
+          <label>
+            Name:
+            <input type="text" id="char-name" required />
+          </label>
+          <label>
+            Player:
+            <input type="text" id="char-player" />
+          </label>
+          <label>
+            Chronicle:
+            <input type="text" id="char-chronicle"/>
+          </label>
+          <label>
+            Concept:
+            <input type="text" id="char-concept"/>
+          </label>
+          <label>
+            Clan:
+            <select id="char-clan" required>
+              <!-- Options dynamically populated -->
+            </select>
+          </label>
+          <label>
+            Generation:
+            <input type="number" id="char-generation" min="1" max="20" />
+          </label>
+          <label>
+            Predator Type:
+            <select id="char-predator-type"></select>
+          </label>
+          <label>
+            Ambition:
+            <textarea id="char-ambition" rows="3" class="resizable-textarea" placeholder="Enter your character's ambition"></textarea>
+          </label>
+          <label>
+            Desire:
+            <textarea id="char-desire" rows="3" class="resizable-textarea" placeholder="Enter your character's desire"></textarea>
+          </label>
+          <label>
+            Character History:
+            <textarea id="char-history" rows="5" class="resizable-textarea" placeholder="Enter backstory"></textarea>
+          </label>
+          <label>
+            Chronicle Tenets:
+            <textarea id="char-chronicle-tenets" rows="4" class="resizable-textarea" placeholder="Enter chronicle tenets"></textarea>
+          </label>
+        </fieldset>
+
+        <!-- Additional form fields (attributes, skills, relationships, etc.) -->
+
+        <button type="submit">Save Character</button>
+      </form>
+    </section>
+
+  </main>
+
+</body>
+</html>
