@@ -1,86 +1,596 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>VTM V5 Character Tracker</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script defer src="app.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vampire: The Masquerade V5 Character Sheet</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <h1>Vampire: The Masquerade V5 Character Tracker</h1>
-  </header>
+    <div class="app-container">
+        <!-- Character List View -->
+        <div id="character-list-view" class="view active">
+            <header class="app-header">
+                <h1>Vampire: The Masquerade V5</h1>
+                <h2>Character Management</h2>
+                <div class="storage-status" id="storage-status">
+                    <small>Loading character data...</small>
+                </div>
+            </header>
+            
+            <div class="main-content">
+                <div class="persistence-notice" id="persistence-notice" style="display: none;">
+                    <h3>⚠️ Character Persistence Notice</h3>
+                    <p>This application is running in a sandboxed environment where browser storage is restricted. Your characters will be saved during this browser session, but <strong>will be lost when you close the tab</strong>.</p>
+                    <p><strong>To save characters permanently:</strong></p>
+                    <ul>
+                        <li>Use the <strong>"Export All"</strong> button to download your characters as a JSON file</li>
+                        <li>Use the <strong>"Import"</strong> button to load characters from a saved JSON file</li>
+                        <li>Keep your exported JSON files safe - they're your permanent character storage</li>
+                    </ul>
+                    <button class="btn btn--primary" onclick="hidePersistenceNotice()">I Understand</button>
+                </div>
+                
+                <div class="character-list-controls">
+                    <button class="btn btn--primary" id="create-character-btn">
+                        + Create New Character
+                    </button>
+                    <div class="data-controls">
+                        <button class="btn btn--secondary" id="export-all-btn">📁 Export All</button>
+                        <input type="file" id="import-file" accept=".json" style="display: none;">
+                        <button class="btn btn--secondary" id="import-btn">📂 Import</button>
+                        <button class="btn btn--outline" id="clear-all-btn">Clear All Data</button>
+                    </div>
+                </div>
+                
+                <div id="character-cards" class="character-grid">
+                    <!-- Character cards will be populated here -->
+                </div>
+                
+                <div id="empty-state" class="empty-state">
+                    <h3>No Characters Created</h3>
+                    <p>Create your first vampire character to begin your chronicle.</p>
+                    <button class="btn btn--primary" onclick="showCharacterCreation()">Create Character</button>
+                </div>
+            </div>
+        </div>
 
-  <main id="app">
+        <!-- Character Sheet View -->
+        <div id="character-sheet-view" class="view">
+            <header class="sheet-header">
+                <button class="btn btn--secondary back-btn" id="back-to-list">← Back to Characters</button>
+                <h2 id="character-name-header">Character Sheet</h2>
+                <div class="header-actions">
+                    <button class="btn btn--outline" id="export-character-btn">Export</button>
+                    <button class="btn btn--primary" id="save-character-btn">Save</button>
+                </div>
+            </header>
 
-    <!-- Character List Section -->
-    <section id="character-list">
-      <button id="create-character-btn">Create New Character</button>
-      <div id="character-cards-container"></div>
-    </section>
+            <div class="sheet-content">
+                <!-- Tab Navigation -->
+                <nav class="tab-nav">
+                    <button class="tab-btn active" data-tab="overview">Overview</button>
+                    <button class="tab-btn" data-tab="attributes">Attributes &amp; Skills</button>
+                    <button class="tab-btn" data-tab="disciplines">Disciplines</button>
+                    <button class="tab-btn" data-tab="advantages">Advantages &amp; Flaws</button>
+                    <button class="tab-btn" data-tab="humanity">Humanity</button>
+                    <button class="tab-btn" data-tab="vitae">Blood &amp; Vitae</button>
+                    <button class="tab-btn" data-tab="experience">Experience</button>
+                    <button class="tab-btn" data-tab="campaign">Campaign</button>
+                </nav>
 
-    <!-- Character Sheet Section -->
-    <section id="character-sheet" hidden>
-      <button id="back-to-list-btn">Back to Character List</button>
+                <!-- Tab Panels -->
+                <div class="tab-panels">
+                    <!-- Overview Tab -->
+                    <div class="tab-panel active" id="overview-panel">
+                        <div class="panel-grid">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Basic Information</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Character Name</label>
+                                            <input type="text" class="form-control" id="char-name" placeholder="Enter character name">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Player Name</label>
+                                            <input type="text" class="form-control" id="player-name" placeholder="Enter player name">
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Chronicle</label>
+                                            <input type="text" class="form-control" id="chronicle" placeholder="Chronicle name">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Concept</label>
+                                            <input type="text" class="form-control" id="concept" placeholder="Character concept">
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Clan</label>
+                                            <select class="form-control" id="clan">
+                                                <option value="">Select Clan</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Generation</label>
+                                            <select class="form-control" id="generation">
+                                                <option value="13th">13th Generation</option>
+                                                <option value="12th">12th Generation</option>
+                                                <option value="11th">11th Generation</option>
+                                                <option value="10th">10th Generation</option>
+                                                <option value="9th">9th Generation</option>
+                                                <option value="8th">8th Generation</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Predator Type</label>
+                                            <select class="form-control" id="predator-type">
+                                                <option value="">Select Predator Type</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Age Category</label>
+                                            <select class="form-control" id="age-category">
+                                                <option value="Childer">Childer (0-15 years)</option>
+                                                <option value="Neonate">Neonate (16-100 years)</option>
+                                                <option value="Ancillae">Ancillae (101-300 years)</option>
+                                                <option value="Elder">Elder (300+ years)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Sire</label>
+                                            <input type="text" class="form-control" id="sire" placeholder="Sire name">
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Ambition</label>
+                                            <input type="text" class="form-control" id="ambition" placeholder="Character's ambition">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Desire</label>
+                                            <input type="text" class="form-control" id="desire" placeholder="Character's desire">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-      <form id="character-form" autocomplete="off">
-        <fieldset>
-          <legend>Basic Information</legend>
-          <label>
-            Name:
-            <input type="text" id="char-name" required />
-          </label>
-          <label>
-            Player:
-            <input type="text" id="char-player" />
-          </label>
-          <label>
-            Chronicle:
-            <input type="text" id="char-chronicle"/>
-          </label>
-          <label>
-            Concept:
-            <input type="text" id="char-concept"/>
-          </label>
-          <label>
-            Clan:
-            <select id="char-clan" required>
-              <!-- Options dynamically populated -->
-            </select>
-          </label>
-          <label>
-            Generation:
-            <input type="number" id="char-generation" min="1" max="20" />
-          </label>
-          <label>
-            Predator Type:
-            <select id="char-predator-type"></select>
-          </label>
-          <label>
-            Ambition:
-            <textarea id="char-ambition" rows="3" class="resizable-textarea" placeholder="Enter your character's ambition"></textarea>
-          </label>
-          <label>
-            Desire:
-            <textarea id="char-desire" rows="3" class="resizable-textarea" placeholder="Enter your character's desire"></textarea>
-          </label>
-          <label>
-            Character History:
-            <textarea id="char-history" rows="5" class="resizable-textarea" placeholder="Enter backstory"></textarea>
-          </label>
-          <label>
-            Chronicle Tenets:
-            <textarea id="char-chronicle-tenets" rows="4" class="resizable-textarea" placeholder="Enter chronicle tenets"></textarea>
-          </label>
-        </fieldset>
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Backstory</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="form-group">
+                                        <label class="form-label">Character History</label>
+                                        <textarea class="form-control" id="backstory" rows="6" placeholder="Write your character's backstory, history, and important events..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
 
-        <!-- Additional form fields (attributes, skills, relationships, etc.) -->
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Relationships</h3>
+                                    <button class="btn btn--sm btn--primary" id="add-relationship-btn">+ Add Relationship</button>
+                                </div>
+                                <div class="card__body">
+                                    <div id="relationships-list" class="relationships-container">
+                                        <!-- Relationships will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-        <button type="submit">Save Character</button>
-      </form>
-    </section>
+                    <!-- Attributes & Skills Tab -->
+                    <div class="tab-panel" id="attributes-panel">
+                        <div class="panel-grid">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Attributes</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="attributes-grid">
+                                        <div class="attribute-category">
+                                            <h4>Physical</h4>
+                                            <div class="attribute-item">
+                                                <label>Strength</label>
+                                                <div class="dots-container" data-attribute="strength" data-max="5"></div>
+                                            </div>
+                                            <div class="attribute-item">
+                                                <label>Dexterity</label>
+                                                <div class="dots-container" data-attribute="dexterity" data-max="5"></div>
+                                            </div>
+                                            <div class="attribute-item">
+                                                <label>Stamina</label>
+                                                <div class="dots-container" data-attribute="stamina" data-max="5"></div>
+                                            </div>
+                                        </div>
+                                        <div class="attribute-category">
+                                            <h4>Social</h4>
+                                            <div class="attribute-item">
+                                                <label>Charisma</label>
+                                                <div class="dots-container" data-attribute="charisma" data-max="5"></div>
+                                            </div>
+                                            <div class="attribute-item">
+                                                <label>Manipulation</label>
+                                                <div class="dots-container" data-attribute="manipulation" data-max="5"></div>
+                                            </div>
+                                            <div class="attribute-item">
+                                                <label>Composure</label>
+                                                <div class="dots-container" data-attribute="composure" data-max="5"></div>
+                                            </div>
+                                        </div>
+                                        <div class="attribute-category">
+                                            <h4>Mental</h4>
+                                            <div class="attribute-item">
+                                                <label>Intelligence</label>
+                                                <div class="dots-container" data-attribute="intelligence" data-max="5"></div>
+                                            </div>
+                                            <div class="attribute-item">
+                                                <label>Wits</label>
+                                                <div class="dots-container" data-attribute="wits" data-max="5"></div>
+                                            </div>
+                                            <div class="attribute-item">
+                                                <label>Resolve</label>
+                                                <div class="dots-container" data-attribute="resolve" data-max="5"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="derived-stats">
+                                        <div class="stat-item">
+                                            <label>Health</label>
+                                            <span id="health-total">6</span>
+                                            <small>(Stamina + 3)</small>
+                                        </div>
+                                        <div class="stat-item">
+                                            <label>Willpower</label>
+                                            <span id="willpower-total">4</span>
+                                            <small>(Composure + Resolve)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-  </main>
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Skills</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="skills-grid">
+                                        <div class="skill-category">
+                                            <h4>Physical</h4>
+                                            <div id="physical-skills" class="skills-list"></div>
+                                        </div>
+                                        <div class="skill-category">
+                                            <h4>Social</h4>
+                                            <div id="social-skills" class="skills-list"></div>
+                                        </div>
+                                        <div class="skill-category">
+                                            <h4>Mental</h4>
+                                            <div id="mental-skills" class="skills-list"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
+                    <!-- Disciplines Tab -->
+                    <div class="tab-panel" id="disciplines-panel">
+                        <div class="card">
+                            <div class="card__header">
+                                <h3>Disciplines</h3>
+                                <button class="btn btn--sm btn--primary" id="add-discipline-btn">+ Add Discipline</button>
+                            </div>
+                            <div class="card__body">
+                                <div id="disciplines-list" class="disciplines-container">
+                                    <!-- Disciplines will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advantages & Flaws Tab -->
+                    <div class="tab-panel" id="advantages-panel">
+                        <div class="panel-grid">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Merits &amp; Advantages</h3>
+                                    <button class="btn btn--sm btn--primary" id="add-merit-btn">+ Add Merit</button>
+                                </div>
+                                <div class="card__body">
+                                    <div id="merits-list" class="merits-container">
+                                        <!-- Merits will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Flaws</h3>
+                                    <button class="btn btn--sm btn--primary" id="add-flaw-btn">+ Add Flaw</button>
+                                </div>
+                                <div class="card__body">
+                                    <div id="flaws-list" class="flaws-container">
+                                        <!-- Flaws will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Humanity Tab -->
+                    <div class="tab-panel" id="humanity-panel">
+                        <div class="panel-grid">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Humanity</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="humanity-tracker">
+                                        <label>Humanity Level</label>
+                                        <div class="dots-container" data-attribute="humanity" data-max="10"></div>
+                                        <div class="stains-tracker">
+                                            <label>Stains</label>
+                                            <div class="stains-dots">
+                                                <span class="stain-dot" data-stain="1"></span>
+                                                <span class="stain-dot" data-stain="2"></span>
+                                                <span class="stain-dot" data-stain="3"></span>
+                                                <span class="stain-dot" data-stain="4"></span>
+                                                <span class="stain-dot" data-stain="5"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Chronicle Tenets</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="form-group">
+                                        <label class="form-label">Chronicle Tenets (1-3)</label>
+                                        <textarea class="form-control" id="chronicle-tenets" rows="4" placeholder="Enter the tenets of your chronicle..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Convictions &amp; Touchstones</h3>
+                                    <button class="btn btn--sm btn--primary" id="add-conviction-btn">+ Add Conviction</button>
+                                </div>
+                                <div class="card__body">
+                                    <div id="convictions-list" class="convictions-container">
+                                        <!-- Convictions will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Blood & Vitae Tab -->
+                    <div class="tab-panel" id="vitae-panel">
+                        <div class="panel-grid">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Blood Potency &amp; Hunger</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="vitae-stats">
+                                        <div class="stat-row">
+                                            <label>Blood Potency</label>
+                                            <div class="dots-container" data-attribute="blood-potency" data-max="5"></div>
+                                        </div>
+                                        <div class="stat-row">
+                                            <label>Hunger</label>
+                                            <div class="hunger-tracker">
+                                                <div class="hunger-die" data-hunger="1"></div>
+                                                <div class="hunger-die" data-hunger="2"></div>
+                                                <div class="hunger-die" data-hunger="3"></div>
+                                                <div class="hunger-die" data-hunger="4"></div>
+                                                <div class="hunger-die" data-hunger="5"></div>
+                                            </div>
+                                        </div>
+                                        <div class="stat-row">
+                                            <label>Current Blood Pool</label>
+                                            <input type="number" class="form-control small" id="blood-pool" min="0" max="50" value="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Blood Resonance</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="resonance-checkboxes">
+                                        <label class="checkbox-item">
+                                            <input type="checkbox" id="resonance-choleric">
+                                            <span>Choleric (Violent)</span>
+                                        </label>
+                                        <label class="checkbox-item">
+                                            <input type="checkbox" id="resonance-melancholic">
+                                            <span>Melancholic (Sad)</span>
+                                        </label>
+                                        <label class="checkbox-item">
+                                            <input type="checkbox" id="resonance-phlegmatic">
+                                            <span>Phlegmatic (Calm)</span>
+                                        </label>
+                                        <label class="checkbox-item">
+                                            <input type="checkbox" id="resonance-sanguine">
+                                            <span>Sanguine (Happy)</span>
+                                        </label>
+                                        <label class="checkbox-item">
+                                            <input type="checkbox" id="resonance-animal">
+                                            <span>Animal</span>
+                                        </label>
+                                        <label class="checkbox-item">
+                                            <input type="checkbox" id="resonance-empty">
+                                            <span>Empty</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Health &amp; Willpower Tracking</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="damage-trackers">
+                                        <div class="tracker-group">
+                                            <label>Health Track</label>
+                                            <div id="health-track" class="damage-track"></div>
+                                        </div>
+                                        <div class="tracker-group">
+                                            <label>Willpower Track</label>
+                                            <div id="willpower-track" class="damage-track"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Experience Tab -->
+                    <div class="tab-panel" id="experience-panel">
+                        <div class="panel-grid">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Experience Points</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="xp-summary">
+                                        <div class="xp-stat">
+                                            <label>Total XP Earned</label>
+                                            <span id="total-xp">0</span>
+                                        </div>
+                                        <div class="xp-stat">
+                                            <label>XP Spent</label>
+                                            <span id="spent-xp">0</span>
+                                        </div>
+                                        <div class="xp-stat highlight">
+                                            <label>Available XP</label>
+                                            <span id="available-xp">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Experience Log</h3>
+                                    <button class="btn btn--sm btn--primary" id="add-xp-entry-btn">+ Add Entry</button>
+                                </div>
+                                <div class="card__body">
+                                    <div id="xp-log" class="xp-log-container">
+                                        <!-- XP log entries will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>XP Costs Reference</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="xp-costs-ref">
+                                        <div class="cost-item">
+                                            <span>Attribute</span>
+                                            <span>New level × 5</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Skill</span>
+                                            <span>New level × 3</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Specialty</span>
+                                            <span>3 XP</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Clan Discipline</span>
+                                            <span>New level × 5</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Other Discipline</span>
+                                            <span>New level × 7</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Merit</span>
+                                            <span>3 XP per dot</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Blood Potency</span>
+                                            <span>New level × 10</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campaign Tab -->
+                    <div class="tab-panel" id="campaign-panel">
+                        <div class="panel-grid">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Campaign Information</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="form-group">
+                                        <label class="form-label">Campaign/Chronicle Name</label>
+                                        <input type="text" class="form-control" id="campaign-name" placeholder="Campaign name">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Campaign Notes</label>
+                                        <textarea class="form-control" id="campaign-notes" rows="4" placeholder="Important campaign information, house rules, etc..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3>Session Log</h3>
+                                    <button class="btn btn--sm btn--primary" id="add-session-btn">+ Add Session</button>
+                                </div>
+                                <div class="card__body">
+                                    <div id="sessions-list" class="sessions-container">
+                                        <!-- Session entries will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="confirm-title">Confirm Action</h3>
+            <p id="confirm-message">Are you sure?</p>
+            <div class="modal-actions">
+                <button class="btn btn--secondary" id="confirm-cancel">Cancel</button>
+                <button class="btn btn--primary" id="confirm-ok">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
